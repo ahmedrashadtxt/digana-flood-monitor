@@ -16,7 +16,7 @@ LOCATIONS = [
         "lat": "7.2942",
         "lon": "80.7381",
         "role": "DIRECT_IMPACT",
-        "threshold_mm": 0.0, 
+        "threshold_mm": 40.0, 
         "msg": "🚨 **IMMEDIATE THREAT (Digana):**\nHeavy rain detected at your location."
     },
     {
