@@ -1,7 +1,7 @@
 import requests
 import feedparser
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 # --- CONFIGURATION ---
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -79,18 +79,28 @@ def check_weather():
             print(f"Error checking {loc['name']}: {e}")
 
 def check_dam_news():
-    """Checks Google News for 'Victoria Dam' specific updates"""
+    """Checks Google News for updates released in the LAST 45 MINUTES."""
     rss_url = "https://news.google.com/rss/search?q=Victoria+Dam+Sri+Lanka+spill+gates+OR+Mahaweli+alert&hl=en-LK&gl=LK&ceid=LK:en"
     
     try:
         feed = feedparser.parse(rss_url)
-        for entry in feed.entries[:3]:
-            # Check if news is from TODAY
-            pub_date = datetime(*entry.published_parsed[:6]).date()
-            if pub_date == datetime.today().date():
-                if any(k.lower() in entry.title.lower() for k in DAM_KEYWORDS):
-                    send_alert(f"📢 **DAM NEWS ALERT:**\n[{entry.title}]({entry.link})")
-                    break 
+        current_time = datetime.now(timezone.utc)
+        
+        # Look at the top 5 news items
+        for entry in feed.entries[:5]:
+            # 1. Get the published time (It is already in UTC)
+            if hasattr(entry, 'published_parsed'):
+                pub_time = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+                
+                # 2. Calculate how old the news is
+                time_difference = current_time - pub_time
+                
+                # 3. ONLY alert if news is less than 45 minutes old
+                # (We use 45 mins to be safe since script runs every 30 mins)
+                if time_difference < timedelta(minutes=45):
+                    if any(k.lower() in entry.title.lower() for k in DAM_KEYWORDS):
+                        send_alert(f"📢 **FRESH DAM ALERT:**\n[{entry.title}]({entry.link})")
+                        
     except Exception as e:
         print(f"RSS Error: {e}")
 
